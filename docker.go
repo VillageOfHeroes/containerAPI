@@ -43,7 +43,6 @@ func CreateContainer(image_name string) (Container, error) {
 		}
 		ports[i] = port
 	}
-	// , "-e", "EULA=TRUE", "--cpus=2", "-p", portStr + ":25565", "itzg/minecraft-server"
 
 	args := []string{"run", "-d", "--cpus=2"}
 

@@ -21,13 +21,15 @@ func main() {
 	Load()
 
 	r := mux.NewRouter()
-	r.HandleFunc("/getPort", GetPortHandler)
+	r.HandleFunc("/getPort/", GetPortHandler)
 	r.HandleFunc("/freePort/{port}", FreePortHandler)
 	r.HandleFunc("/createServer/{image_name}", CreateServerHandler)
 	r.HandleFunc("/deleteServer/{name}", DeleteServerHandler)
 	r.HandleFunc("/startServer/{name}", StartServerHandler)
 	r.HandleFunc("/stopServer/{name}", StopServerHandler)
 	r.HandleFunc("/getServerInfo/{name}", GetServerInfoHandler)
+	r.HandleFunc("/getServerInfos/", GetServerInfosHandler)
+	r.HandleFunc("/getImages/", GetImagesHandler)
 	r.HandleFunc("/secretInfos/", SecretServerHandler)
 	r.HandleFunc("/sendCommand/{name}/{command}", SendCommandHandler)
 	http.Handle("/", r)
@@ -90,7 +92,6 @@ func GetPortHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]int{"port": port})
 	}
-
 }
 
 func CreateServerHandler(w http.ResponseWriter, r *http.Request) {
@@ -246,6 +247,23 @@ func GetServerInfoHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(container)
 	log.Print(container)
+}
+
+func GetImagesHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	images := []string{}
+	for k, _ := range imageDB {
+		images = append(images, k)
+	}
+
+	json.NewEncoder(w).Encode(images)
+	log.Print(db)
+}
+
+func GetServerInfosHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(db.ContainerMap)
+	log.Print(db)
 }
 
 func SecretServerHandler(w http.ResponseWriter, r *http.Request) {
