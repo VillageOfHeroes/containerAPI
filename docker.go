@@ -14,9 +14,11 @@ func DeleteContainer(container Container) error {
 		return errors.New("Container is still online")
 	}
 	RemoveContainer(container)
-	FreePort(container.Port)
+	for i := range container.Port {
+		FreePort(i)
+	}
 
-	cmd := exec.Command("docker", "rm", container.Name)
+	cmd := exec.Command("docker", "rm", "-v", container.Name)
 	log.Print(cmd.String())
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
@@ -25,48 +27,73 @@ func DeleteContainer(container Container) error {
 	return err
 }
 
-func CreateContainer(image string) (Container, error) {
+func CreateContainer(image_name string) (Container, error) {
 
 	empty := Container{}
-	if image == "itzg/minecraft-server" {
+	image, ok := imageDB[image_name]
+	if !ok {
+		return empty, errors.New("image currently not supported")
+	}
+
+	ports := make([]int, len(image.Ports))
+	for i := 0; i < len(image.Ports); i++ {
 		port, err := GetPort()
 		if err != nil {
 			return empty, err
 		}
-		portStr := strconv.Itoa(port)
-		cmd := exec.Command("docker", "run", "-d", "-e", "EULA=TRUE", "--cpus=2", "-p", portStr+":25565", "itzg/minecraft-server")
-		log.Print(cmd.String())
-		cmd.Stderr = os.Stderr
-
-		out, err2 := cmd.Output()
-		id := string(out)
-
-		if err2 != nil {
-			log.Fatal(err2)
-			FreePort(port)
-			return empty, err2
-		}
-
-		cmd = exec.Command("sh", "./getName.sh", id)
-		cmd.Stderr = os.Stderr
-
-		out, err = cmd.Output()
-		name := string(out)
-		name = strings.Trim(name, "\n ")
-
-		if err != nil {
-			log.Fatal(err)
-			FreePort(port)
-			return empty, err
-		}
-
-		container := Container{Image: image, Port: port, Name: name, Id: id, Up: true}
-
-		AddContainer(container)
-		return container, nil
-	} else {
-		return empty, errors.New("image currently not supported")
+		ports[i] = port
 	}
+	// , "-e", "EULA=TRUE", "--cpus=2", "-p", portStr + ":25565", "itzg/minecraft-server"
+
+	args := []string{"run", "-d", "--cpus=2"}
+
+	for i := 0; i < len(image.Ports); i++ {
+		if image.Ports[i].Udp {
+			args = append(args, "-p", strconv.Itoa(ports[i])+":"+strconv.Itoa(image.Ports[i].Port)+"/udp")
+		}
+		args = append(args, "-p", strconv.Itoa(ports[i])+":"+strconv.Itoa(image.Ports[i].Port)+"/tcp")
+	}
+
+	for k, v := range image.Environments {
+		args = append(args, "-e", k+"="+v)
+	}
+
+	args = append(args, image.Image)
+
+	for i := 0; i < len(image.CommandArgs); i++ {
+		args = append(args, image.CommandArgs[i])
+	}
+
+	cmd := exec.Command("docker", args[0:]...)
+	log.Print(cmd.String())
+	cmd.Stderr = os.Stderr
+
+	out, err2 := cmd.Output()
+	id := strings.Trim(string(out), " \n")
+
+	if err2 != nil {
+		log.Fatal(err2)
+		//FreePort(port)
+		return empty, err2
+	}
+
+	cmd = exec.Command("sh", "./getName.sh", id)
+	cmd.Stderr = os.Stderr
+
+	out, err2 = cmd.Output()
+	name := string(out)
+	name = strings.Trim(name, "\n ")
+
+	if err2 != nil {
+		log.Fatal(err2)
+		//FreePort(port)
+		return empty, err2
+	}
+
+	container := Container{Image: image_name, Port: ports, Name: name, Id: id, Up: true}
+
+	AddContainer(container)
+	return container, nil
 
 }
 

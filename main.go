@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
 	"time"
 
@@ -13,15 +16,18 @@ import (
 // XXXXXX main XXXXX
 
 func main() {
+
 	InitDB()
+	Load()
 
 	r := mux.NewRouter()
 	r.HandleFunc("/getPort", GetPortHandler)
 	r.HandleFunc("/freePort/{port}", FreePortHandler)
-	r.HandleFunc("/createServer/{image}", CreateServerHandler)
+	r.HandleFunc("/createServer/{image_name}", CreateServerHandler)
 	r.HandleFunc("/deleteServer/{name}", DeleteServerHandler)
 	r.HandleFunc("/startServer/{name}", StartServerHandler)
 	r.HandleFunc("/stopServer/{name}", StopServerHandler)
+	r.HandleFunc("/getServerInfo/{name}", GetServerInfoHandler)
 	r.HandleFunc("/secretInfos/", SecretServerHandler)
 	r.HandleFunc("/sendCommand/{name}/{command}", SendCommandHandler)
 	http.Handle("/", r)
@@ -34,7 +40,25 @@ func main() {
 		ReadTimeout:  15 * time.Second,
 	}
 
-	log.Fatal(srv.ListenAndServe())
+	go func() {
+		if err := srv.ListenAndServe(); err != nil {
+			Save()
+			log.Fatal(err)
+		}
+	}()
+
+	// Setting up signal capturing
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+
+	// Waiting for SIGINT (pkill -2)
+	<-stop
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // XXXXX Functions XXXXX
@@ -70,7 +94,16 @@ func GetPortHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateServerHandler(w http.ResponseWriter, r *http.Request) {
-	container, err := CreateContainer("itzg/minecraft-server")
+	vars := mux.Vars(r)
+
+	image_name, ok := vars["image_name"]
+	if !ok {
+		w.WriteHeader(http.StatusExpectationFailed)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Please provide An Image"})
+		return
+	}
+
+	container, err := CreateContainer(image_name)
 	if err != nil {
 		w.WriteHeader(http.StatusExpectationFailed)
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
@@ -195,8 +228,31 @@ func SendCommandHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func GetServerInfoHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	name, ok := vars["name"]
+	if !ok {
+		w.WriteHeader(http.StatusExpectationFailed)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Please provide Name"})
+		return
+	}
+	container, ok2 := GetContainer(name)
+	if !ok2 {
+		w.WriteHeader(http.StatusExpectationFailed)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Container does not exist"})
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(container)
+	log.Print(container)
+}
+
 func SecretServerHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(db.containerMap)
+	json.NewEncoder(w).Encode(db.ContainerMap)
 	log.Print(db)
+
+	json.NewEncoder(w).Encode(imageDB)
+	log.Print(imageDB)
 }

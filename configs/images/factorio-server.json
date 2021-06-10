@@ -1,0 +1,16 @@
+{
+    "name": "factorio-server",
+    "ports": [
+        {
+            "port": 34197,
+            "udp": true
+        },
+        {
+            "port": 25565,
+            "udp": false
+        }
+    ],
+    "image_name": "factoriotools/factorio",
+    "environment_vars": {},
+    "command_args": []
+}

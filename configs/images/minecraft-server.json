@@ -1,0 +1,14 @@
+{
+    "name": "minecraft-server",
+    "ports": [
+        {
+            "port": 25565,
+            "udp": false
+        }
+    ],
+    "image_name": "itzg/minecraft-server",
+    "environment_vars": {
+        "EULA": "TRUE"
+    },
+    "command_args": []
+}

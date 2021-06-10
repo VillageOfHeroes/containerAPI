@@ -1,0 +1,17 @@
+{
+    "name": "terraria-server",
+    "ports": [
+        {
+            "port": 7777,
+            "udp": false
+        }
+    ],
+    "image_name": "ryshe/terraria",
+    "environment_vars": {},
+    "command_args": [
+        "-world",
+        "/root/.local/share/Terraria/Worlds/world.wld",
+        "-autocreate",
+        "3"
+    ]
+}
