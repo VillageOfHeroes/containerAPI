@@ -16,7 +16,13 @@ func DeleteContainer(container Container) error {
 	RemoveContainer(container)
 	FreePort(container.Port)
 
-	return nil
+	cmd := exec.Command("docker", "rm", container.Name)
+	log.Print(cmd.String())
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	err := cmd.Run()
+
+	return err
 }
 
 func CreateContainer(image string) (Container, error) {
