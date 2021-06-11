@@ -1,0 +1,16 @@
+{
+    "name": "ark-server",
+    "ports": [
+        {
+            "port": 7778,
+            "udp": true
+        },
+        {
+            "port": 7777,
+            "udp": true
+        }
+    ],
+    "image_name": "thmhoag/arkserver",
+    "environment_vars": {},
+    "command_args": []
+}

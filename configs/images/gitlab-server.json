@@ -1,0 +1,20 @@
+{
+    "name": "gitlab-server",
+    "ports": [
+        {
+            "port": 443,
+            "udp": false
+        },
+        {
+            "port": 80,
+            "udp": false
+        },
+        {
+            "port": 22,
+            "udp": false
+        }
+    ],
+    "image_name": "gitlab/gitlab-ee:latest",
+    "environment_vars": {},
+    "command_args": []
+}
