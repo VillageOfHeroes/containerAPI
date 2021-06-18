@@ -11,6 +11,7 @@ type DB struct {
 	LastPort     int                  `json:"port"`
 	PortsList    map[int]bool         `json:"ports_list"`
 	ContainerMap map[string]Container `json:"container_map"`
+	UserList     map[string]*User
 }
 
 type Container struct {
@@ -27,6 +28,7 @@ func InitDB() {
 	db.LastPort = 25595
 	db.PortsList = make(map[int]bool)
 	db.ContainerMap = make(map[string]Container)
+	db.UserList = make(map[string]*User)
 }
 
 func GetContainer(name string) (Container, bool) {
@@ -79,6 +81,20 @@ func FreePort(port int) {
 	db.PortsList[port] = false
 }
 
+func GetUser(username string) (*User, bool) {
+	user, ok := db.UserList[username]
+	return user, ok
+}
+
+func createUser(username string, pubKey string, accountType AccountType) *User {
+	user := User{
+		Username: username,
+		Role:     accountType,
+		pubKey:   pubKey,
+	}
+	db.UserList[username] = &user
+	return &user
+}
 func Save() {
 	file, err := os.OpenFile("save.json", os.O_TRUNC|os.O_WRONLY, os.ModePerm)
 
@@ -89,7 +105,7 @@ func Save() {
 			log.Print(err.Error())
 		}
 	} else {
-		log.Fatal("COULD NOT SAVE CONTAINER!")
+		log.Fatal("COULD NOT SAVE DB!")
 	}
 
 	defer file.Close()
@@ -105,10 +121,13 @@ func Load() {
 			log.Print(err.Error())
 		}
 	} else {
-		log.Fatal("COULD NOT LOAD CONTAINER!")
+		log.Fatal("COULD NOT LOAD DB!")
 	}
 
 	LoadImages()
 
 	defer file.Close()
+
+	createUser("buh", "1234", ADMIN)
+	createUser("lars", "abcd", ADMIN)
 }
